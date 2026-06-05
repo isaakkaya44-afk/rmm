@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build artifacts
+dist/
+target/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.local
+
+# Logs
+*.log

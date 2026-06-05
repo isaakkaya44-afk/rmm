@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rmm-postgres
+    environment:
+      POSTGRES_USER: rmm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rmm_password}
+      POSTGRES_DB: rmm_platform
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rmm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rmm-net
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.api
+    container_name: rmm-api
+    environment:
+      SERVER_PORT: "8080"
+      SERVER_ENV: "production"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: rmm
+      DB_PASSWORD: ${DB_PASSWORD:-rmm_password}
+      DB_NAME: rmm_platform
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 168h
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - rmm-net
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: rmm-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - rmm-net
+
+volumes:
+  postgres_data:
+
+networks:
+  rmm-net:
+    driver: bridge

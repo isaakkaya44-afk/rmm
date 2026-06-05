@@ -1,0 +1,28 @@
+server:
+  base_url: "http://localhost:8080"
+  api_key: ""
+  heartbeat_endpoint: "/api/v1/devices/heartbeat"
+  timeout: 10
+
+agent:
+  hostname: ""
+  interval: 30
+  offline_queue_size: 100
+  rustdesk_path: "C:\\Program Files\\RustDesk"
+  screenshot_enabled: false
+
+monitor:
+  pos_processes:
+    - "pos.exe"
+    - "restaurant_pos.exe"
+    - "samba_pos.exe"
+  critical_services:
+    - "MpsSvc"
+  mssql_services:
+    - "MSSQLSERVER"
+    - "MSSQL$SQLEXPRESS"
+
+logging:
+  level: "info"
+  file: "C:\\ProgramData\\RMMAgent\\agent.log"
+  max_age_days: 7

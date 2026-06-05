@@ -1,0 +1,1090 @@
+basePath: /api/v1
+definitions:
+  alerts.Alert:
+    properties:
+      acknowledged_at:
+        type: string
+      acknowledged_by:
+        type: string
+      created_at:
+        type: string
+      device_id:
+        type: string
+      device_name:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      metric_value:
+        type: number
+      resolution_note:
+        type: string
+      resolved_at:
+        type: string
+      resolved_by:
+        type: string
+      severity:
+        type: string
+      status:
+        type: string
+      threshold_value:
+        type: number
+      title:
+        type: string
+      type:
+        type: string
+    type: object
+  alerts.AlertListResponse:
+    properties:
+      alerts:
+        items:
+          $ref: '#/definitions/alerts.Alert'
+        type: array
+      total:
+        type: integer
+    type: object
+  alerts.ResolveRequest:
+    properties:
+      resolution_note:
+        type: string
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/auth.UserDTO'
+    type: object
+  auth.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login_at:
+        type: string
+      role_id:
+        type: integer
+      role_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  auth.UserDTO:
+    properties:
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      role:
+        type: string
+    type: object
+  devices.Device:
+    properties:
+      agent_version:
+        type: string
+      cpu_cores:
+        type: integer
+      cpu_model:
+        type: string
+      created_at:
+        type: string
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      disk_total_mb:
+        type: integer
+      hostname:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_online:
+        type: boolean
+      last_heartbeat:
+        type: string
+      mssql_status:
+        type: string
+      notes:
+        type: string
+      os_version:
+        type: string
+      pos_process_status:
+        type: string
+      ram_total_mb:
+        type: integer
+      rustdesk_id:
+        type: string
+      rustdesk_password:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  devices.DeviceCreateRequest:
+    properties:
+      customer_id:
+        type: string
+      hostname:
+        type: string
+      notes:
+        type: string
+      os_version:
+        type: string
+      rustdesk_id:
+        type: string
+    required:
+    - hostname
+    type: object
+  devices.DeviceListResponse:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/devices.Device'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  devices.DeviceMetric:
+    properties:
+      cpu_percent:
+        type: number
+      device_id:
+        type: string
+      disk_percent:
+        type: number
+      disk_used_mb:
+        type: integer
+      id:
+        type: integer
+      mssql_running:
+        type: boolean
+      pos_running:
+        type: boolean
+      ram_percent:
+        type: number
+      ram_used_mb:
+        type: integer
+      recorded_at:
+        type: string
+      uptime_seconds:
+        type: integer
+    type: object
+  devices.DeviceUpdateRequest:
+    properties:
+      customer_id:
+        type: string
+      hostname:
+        type: string
+      mssql_status:
+        type: string
+      notes:
+        type: string
+      pos_process_status:
+        type: string
+      rustdesk_id:
+        type: string
+      rustdesk_password:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  devices.HeartbeatRequest:
+    properties:
+      agent_version:
+        type: string
+      cpu_cores:
+        type: integer
+      cpu_model:
+        type: string
+      cpu_percent:
+        type: number
+      disk_percent:
+        type: number
+      disk_total_mb:
+        type: integer
+      disk_used_mb:
+        type: integer
+      hostname:
+        type: string
+      mssql_running:
+        type: boolean
+      os_version:
+        type: string
+      pos_running:
+        type: boolean
+      ram_percent:
+        type: number
+      ram_total_mb:
+        type: integer
+      ram_used_mb:
+        type: integer
+      rustdesk_id:
+        type: string
+      uptime_seconds:
+        type: integer
+    required:
+    - hostname
+    type: object
+  monitoring.DashboardSummary:
+    properties:
+      critical_alerts:
+        type: integer
+      offline_devices:
+        type: integer
+      online_devices:
+        type: integer
+      open_tickets:
+        type: integer
+      total_devices:
+        type: integer
+    type: object
+  tickets.AddCommentRequest:
+    properties:
+      content:
+        type: string
+      is_internal:
+        type: boolean
+    required:
+    - content
+    type: object
+  tickets.CreateTicketRequest:
+    properties:
+      alert_id:
+        type: string
+      assigned_to:
+        type: string
+      customer_id:
+        type: string
+      description:
+        type: string
+      device_id:
+        type: string
+      priority:
+        type: string
+      source:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  tickets.Ticket:
+    properties:
+      alert_id:
+        type: string
+      assigned_name:
+        type: string
+      assigned_to:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      created_name:
+        type: string
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      description:
+        type: string
+      device_id:
+        type: string
+      device_name:
+        description: Joined
+        type: string
+      id:
+        type: string
+      priority:
+        type: string
+      resolved_at:
+        type: string
+      source:
+        type: string
+      status:
+        type: string
+      ticket_number:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  tickets.TicketComment:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_internal:
+        type: boolean
+      ticket_id:
+        type: string
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  tickets.TicketListResponse:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      tickets:
+        items:
+          $ref: '#/definitions/tickets.Ticket'
+        type: array
+      total:
+        type: integer
+    type: object
+  tickets.UpdateTicketRequest:
+    properties:
+      assigned_to:
+        type: string
+      description:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Remote Monitoring & Management Platform API
+  title: RMM Platform API
+  version: "1.0"
+paths:
+  /alerts:
+    get:
+      description: Get paginated list of alerts with optional filters
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by status (open/acknowledged/resolved)
+        in: query
+        name: status
+        type: string
+      - description: Filter by severity (critical/warning/info)
+        in: query
+        name: severity
+        type: string
+      - description: Filter by device ID
+        in: query
+        name: device_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/alerts.AlertListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List alerts
+      tags:
+      - alerts
+  /alerts/{id}:
+    get:
+      description: Get detailed alert information
+      parameters:
+      - description: Alert ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/alerts.Alert'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get alert by ID
+      tags:
+      - alerts
+  /alerts/{id}/acknowledge:
+    post:
+      description: Mark alert as acknowledged
+      parameters:
+      - description: Alert ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/alerts.Alert'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Acknowledge alert
+      tags:
+      - alerts
+  /alerts/{id}/resolve:
+    post:
+      consumes:
+      - application/json
+      description: Mark alert as resolved with optional note
+      parameters:
+      - description: Alert ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Resolution note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/alerts.ResolveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/alerts.Alert'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resolve alert
+      tags:
+      - alerts
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password, returns JWT tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Authenticate user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout user
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Get authenticated user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh JWT token
+      tags:
+      - auth
+  /dashboard:
+    get:
+      description: Get overall system health summary
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/monitoring.DashboardSummary'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get dashboard summary
+      tags:
+      - monitoring
+  /devices:
+    get:
+      description: Get paginated list of devices
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Search by hostname or customer
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices.DeviceListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List devices
+      tags:
+      - devices
+    post:
+      consumes:
+      - application/json
+      description: Register a new device
+      parameters:
+      - description: Device data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/devices.DeviceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/devices.Device'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create device
+      tags:
+      - devices
+  /devices/{id}:
+    delete:
+      description: Soft-delete a device
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete device
+      tags:
+      - devices
+    get:
+      description: Get detailed device information
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices.Device'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get device by ID
+      tags:
+      - devices
+    put:
+      consumes:
+      - application/json
+      description: Update device information
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device update data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/devices.DeviceUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices.Device'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update device
+      tags:
+      - devices
+  /devices/{id}/metrics:
+    get:
+      description: Get historical metrics for a device
+      parameters:
+      - description: Device ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Number of metrics entries (default 60)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/devices.DeviceMetric'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get device metrics history
+      tags:
+      - devices
+  /devices/heartbeat:
+    post:
+      consumes:
+      - application/json
+      description: Process agent heartbeat with system metrics
+      parameters:
+      - description: Heartbeat data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/devices.HeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices.Device'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Receive device heartbeat
+      tags:
+      - devices
+  /tickets:
+    get:
+      description: Get paginated list of support tickets
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by device ID
+        in: query
+        name: device_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tickets.TicketListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List tickets
+      tags:
+      - tickets
+    post:
+      consumes:
+      - application/json
+      description: Create a new support ticket
+      parameters:
+      - description: Ticket data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tickets.CreateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/tickets.Ticket'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create ticket
+      tags:
+      - tickets
+  /tickets/{id}:
+    get:
+      description: Get ticket details with comments
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ticket by ID
+      tags:
+      - tickets
+    put:
+      consumes:
+      - application/json
+      description: Update ticket status or details
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ticket update data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tickets.UpdateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tickets.Ticket'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update ticket
+      tags:
+      - tickets
+  /tickets/{id}/comments:
+    post:
+      consumes:
+      - application/json
+      description: Add a comment to a support ticket
+      parameters:
+      - description: Ticket ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comment data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/tickets.AddCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/tickets.TicketComment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add ticket comment
+      tags:
+      - tickets
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

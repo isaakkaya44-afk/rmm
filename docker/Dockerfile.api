@@ -1,0 +1,25 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /rmm-api ./cmd/api
+
+FROM alpine:3.19
+
+RUN apk --no-cache add ca-certificates tzdata postgresql-client
+
+WORKDIR /app
+COPY --from=builder /rmm-api .
+COPY migrations/ /app/migrations/
+COPY docker/entrypoint.sh /app/entrypoint.sh
+
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/entrypoint.sh"]

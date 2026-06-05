@@ -1,0 +1,19 @@
+server:
+  base_url: "http://localhost:8080"
+  api_key: ""
+  heartbeat_endpoint: "/api/v1/devices/heartbeat"
+  timeout: 10
+agent:
+  hostname: "TEST-AGENT-PC"
+  interval: 5
+  offline_queue_size: 100
+  rustdesk_path: 'C:\Program Files\RustDesk'
+  screenshot_enabled: false
+monitor:
+  pos_processes: []
+  critical_services: []
+  mssql_services: []
+logging:
+  level: "debug"
+  file: 'agent_test.log'
+  max_age_days: 1
