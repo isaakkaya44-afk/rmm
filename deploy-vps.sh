@@ -349,7 +349,7 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS devices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
-  hostname VARCHAR(255) NOT NULL,
+  hostname VARCHAR(255) NOT NULL UNIQUE,
   os_version VARCHAR(255),
   cpu_model VARCHAR(255),
   cpu_cores INTEGER,
@@ -368,6 +368,7 @@ CREATE TABLE IF NOT EXISTS devices (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_hostname_unique ON devices(hostname);
 CREATE TABLE IF NOT EXISTS alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
@@ -399,7 +400,6 @@ CREATE TABLE IF NOT EXISTS tickets (
   closed_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_devices_customer ON devices(customer_id);
-CREATE INDEX IF NOT EXISTS idx_devices_hostname ON devices(hostname);
 CREATE INDEX IF NOT EXISTS idx_devices_online ON devices(is_online) WHERE is_online = true;
 CREATE INDEX IF NOT EXISTS idx_alerts_device ON alerts(device_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at);
