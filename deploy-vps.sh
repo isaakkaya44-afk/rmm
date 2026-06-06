@@ -127,7 +127,7 @@ import (
 func main() {
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"service":"rmm-platform-api","status":"ok","version":"1.0.0"}) })
-	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":["/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard"]}) })
+	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":[]string{"/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard"}}) })
 	h := auth.NewHandler()
 	api := r.Group("/api/v1")
 	{ api.POST("/auth/register", h.Register); api.POST("/auth/login", h.Login); api.GET("/dashboard", h.Dashboard) }
