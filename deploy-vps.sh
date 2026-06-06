@@ -10,6 +10,13 @@ echo "[1/15] Stopping conflicting containers..."
 docker stop $(docker ps -q --filter "publish=80") 2>/dev/null || true
 sleep 2
 
+# 1b. Mevcut RMM container/volume'larını temizle (DB password uyumu için)
+echo "[1b] Cleaning previous RMM deployment..."
+cd /opt/rmm 2>/dev/null && docker compose down -v 2>/dev/null || true
+docker volume rm rmm_postgres_data 2>/dev/null || true
+docker rm -f rmm-postgres-1 rmm-api-1 rmm-frontend-1 2>/dev/null || true
+sleep 1
+
 # 2. Çalışma dizini
 echo "[2/15] Preparing directories..."
 rm -rf /opt/rmm && mkdir -p /opt/rmm && cd /opt/rmm
@@ -89,10 +96,12 @@ echo "Waiting for postgres..."
 for i in $(seq 1 30); do
   pg_isready -h $DB_HOST -U $DB_USER && break || sleep 2
 done
+echo "Syncing user password..."
+PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U postgres -d postgres -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 echo "Running migrations..."
 for f in /app/migrations/*.sql; do
   echo "  Applying: $(basename $f)"
-  PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f "$f" 2>/dev/null || true
+  PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f "$f" 2>&1 | grep -E "ERROR|NOTICE|ALTER|CREATE" || true
 done
 echo "Starting RMM API..."
 exec /app/rmm-api
@@ -611,7 +620,7 @@ EOF
 
 # 13. .env
 echo "[14/15] Generating secrets..."
-DB_PASS=$(openssl rand -hex 32)
+DB_PASS="RmmVps_2026_Secure_$(openssl rand -hex 8)"
 JWT_SECRET=$(openssl rand -base64 32)
 cat > .env <<EOF
 DB_PASSWORD=$DB_PASS
