@@ -6,18 +6,18 @@ echo " RMM Platform - VPS Deploy (Hetzner CPX32)"
 echo "============================================"
 
 # 1. Port 80 çakışan container'ları durdur
-echo "[1/14] Stopping conflicting containers..."
+echo "[1/15] Stopping conflicting containers..."
 docker stop $(docker ps -q --filter "publish=80") 2>/dev/null || true
 sleep 2
 
 # 2. Çalışma dizini
-echo "[2/14] Preparing directories..."
+echo "[2/15] Preparing directories..."
 rm -rf /opt/rmm && mkdir -p /opt/rmm && cd /opt/rmm
 mkdir -p backend/cmd/api backend/internal/auth backend/migrations
 mkdir -p frontend/src/pages
 
 # 3. docker-compose.yml
-echo "[3/14] Creating docker-compose.yml..."
+echo "[3/15] Creating docker-compose.yml..."
 cat > docker-compose.yml << 'EOF'
 services:
   postgres:
@@ -59,7 +59,7 @@ networks: {rmm-net: {driver: bridge}}
 EOF
 
 # 4. Backend Dockerfile
-echo "[4/14] Creating backend Dockerfile..."
+echo "[4/15] Creating backend Dockerfile..."
 cat > backend/Dockerfile << 'EOF'
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
@@ -80,7 +80,7 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 EOF
 
 # 5. Backend entrypoint.sh
-echo "[5/14] Creating entrypoint.sh..."
+echo "[5/15] Creating entrypoint.sh..."
 cat > backend/entrypoint.sh << 'EOF'
 #!/bin/sh
 set -e
@@ -98,7 +98,7 @@ exec /app/rmm-api
 EOF
 
 # 6. go.mod
-echo "[6/14] Creating go.mod..."
+echo "[6/15] Creating go.mod..."
 cat > backend/go.mod << 'EOF'
 module rmm-platform
 go 1.22
@@ -106,11 +106,12 @@ require (
   github.com/gin-gonic/gin v1.10.1
   github.com/golang-jwt/jwt/v5 v5.2.2
   github.com/google/uuid v1.6.0
+  github.com/jackc/pgx/v5 v5.5.5
 )
 EOF
 
 # 7. main.go
-echo "[7/14] Creating main.go..."
+echo "[7/15] Creating main.go..."
 cat > backend/cmd/api/main.go << 'EOF'
 package main
 import (
@@ -123,14 +124,17 @@ import (
 	"time"
 	"github.com/gin-gonic/gin"
 	"rmm-platform/internal/auth"
+	"rmm-platform/internal/devices"
 )
 func main() {
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"service":"rmm-platform-api","status":"ok","version":"1.0.0"}) })
-	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":[]string{"/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard"}}) })
+	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":[]string{"/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard","/api/v1/devices/heartbeat","/api/v1/devices"}}) })
 	h := auth.NewHandler()
+	dh, err := devices.NewHandler()
+	if err != nil { log.Fatalf("devices handler init failed: %v", err) }
 	api := r.Group("/api/v1")
-	{ api.POST("/auth/register", h.Register); api.POST("/auth/login", h.Login); api.GET("/dashboard", h.Dashboard) }
+	{ api.POST("/auth/register", h.Register); api.POST("/auth/login", h.Login); api.GET("/dashboard", h.Dashboard); api.POST("/devices/heartbeat", dh.Heartbeat); api.GET("/devices", dh.List) }
 	srv := &http.Server{Addr: ":8080", Handler: r}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed { log.Fatal(err) }
@@ -144,7 +148,7 @@ func main() {
 EOF
 
 # 8. auth.go (DEMO MODE)
-echo "[8/14] Creating auth.go (demo mode)..."
+echo "[8/15] Creating auth.go (demo mode)..."
 cat > backend/internal/auth/auth.go << 'EOF'
 package auth
 import (
@@ -201,8 +205,116 @@ func (h *Handler) Dashboard(c *gin.Context) { c.JSON(200, gin.H{"devices": 0, "a
 func AuthMiddleware() gin.HandlerFunc { return func(c *gin.Context) { c.Next() } }
 EOF
 
+# 9. devices.go (heartbeat handler with PostgreSQL)
+echo "[9/15] Creating devices.go (heartbeat + list)..."
+mkdir -p backend/internal/devices
+cat > backend/internal/devices/handler.go << 'EOF'
+package devices
+import (
+	"context"
+	"fmt"
+	"os"
+	"time"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+type Handler struct{ pool *pgxpool.Pool }
+func NewHandler() (*Handler, error) {
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"), os.Getenv("DB_SSLMODE"))
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil { return nil, err }
+	cfg.MaxConns = 10
+	cfg.MinConns = 1
+	cfg.MaxConnLifetime = 30 * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil { return nil, err }
+	if err := pool.Ping(ctx); err != nil { return nil, err }
+	return &Handler{pool: pool}, nil
+}
+type HeartbeatRequest struct {
+	AgentID        string  `json:"agent_id"`
+	Hostname       string  `json:"hostname"`
+	OSVersion      string  `json:"os_version"`
+	CPUPercent     float64 `json:"cpu_percent"`
+	RAMPercent     float64 `json:"ram_percent"`
+	RAMUsedMB      int64   `json:"ram_used_mb"`
+	RAMTotalMB     int64   `json:"ram_total_mb"`
+	DiskPercent    float64 `json:"disk_percent"`
+	DiskUsedMB     int64   `json:"disk_used_mb"`
+	DiskTotalMB    int64   `json:"disk_total_mb"`
+	UptimeSeconds  int64   `json:"uptime_seconds"`
+	CPUModel       string  `json:"cpu_model"`
+	CPUCores       int     `json:"cpu_cores"`
+	POSRunning     bool    `json:"pos_running"`
+	MSSQLRunning   bool    `json:"mssql_running"`
+	RustDeskID     string  `json:"rustdesk_id"`
+	AgentVersion   string  `json:"agent_version"`
+	Timestamp      string  `json:"timestamp"`
+}
+func boolToStr(b bool) string { if b { return "running" }; return "stopped" }
+func (h *Handler) Heartbeat(c *gin.Context) {
+	var req HeartbeatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Hostname == "" {
+		c.JSON(400, gin.H{"error": "hostname required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	mssqlStatus := boolToStr(req.MSSQLRunning)
+	posStatus := boolToStr(req.POSRunning)
+	var deviceID string
+	upsertSQL := `INSERT INTO devices (hostname, os_version, cpu_model, cpu_cores, ram_total_mb, disk_total_mb, rustdesk_id, agent_version, mssql_status, pos_process_status, last_heartbeat, is_online, is_active) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7,''), $8, $9, $10, NOW(), true, true) ON CONFLICT (hostname) DO UPDATE SET os_version = EXCLUDED.os_version, cpu_model = EXCLUDED.cpu_model, cpu_cores = EXCLUDED.cpu_cores, ram_total_mb = EXCLUDED.ram_total_mb, disk_total_mb = EXCLUDED.disk_total_mb, rustdesk_id = COALESCE(EXCLUDED.rustdesk_id, devices.rustdesk_id), agent_version = EXCLUDED.agent_version, mssql_status = EXCLUDED.mssql_status, pos_process_status = EXCLUDED.pos_process_status, last_heartbeat = NOW(), is_online = true, updated_at = NOW() RETURNING id`
+	err := h.pool.QueryRow(ctx, upsertSQL, req.Hostname, req.OSVersion, req.CPUModel, req.CPUCores, req.RAMTotalMB, req.DiskTotalMB, req.RustDeskID, req.AgentVersion, mssqlStatus, posStatus).Scan(&deviceID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "device upsert failed: " + err.Error()})
+		return
+	}
+	metricSQL := `INSERT INTO device_metrics (device_id, cpu_percent, ram_percent, ram_used_mb, disk_percent, disk_used_mb, uptime_seconds, pos_running, mssql_running) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, err = h.pool.Exec(ctx, metricSQL, deviceID, req.CPUPercent, req.RAMPercent, req.RAMUsedMB, req.DiskPercent, req.DiskUsedMB, req.UptimeSeconds, req.POSRunning, req.MSSQLRunning)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "metric insert failed: " + err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"status": "ok", "device_id": deviceID, "hostname": req.Hostname, "timestamp": time.Now().UTC().Format(time.RFC3339)})
+}
+func (h *Handler) List(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	rows, err := h.pool.Query(ctx, `SELECT id, hostname, COALESCE(os_version,''), COALESCE(cpu_model,''), COALESCE(cpu_cores,0), COALESCE(ram_total_mb,0), COALESCE(disk_total_mb,0), COALESCE(rustdesk_id,''), COALESCE(agent_version,''), COALESCE(mssql_status,'unknown'), COALESCE(pos_process_status,'unknown'), is_online, last_heartbeat, created_at FROM devices ORDER BY last_heartbeat DESC NULLS LAST LIMIT 100`)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	devices := []gin.H{}
+	for rows.Next() {
+		var id, hostname, osVer, cpuModel, rustID, agentVer, mssqlSt, posSt string
+		var cpuCores int
+		var ramTotal, diskTotal int64
+		var isOnline bool
+		var lastHB, createdAt *time.Time
+		if err := rows.Scan(&id, &hostname, &osVer, &cpuModel, &cpuCores, &ramTotal, &diskTotal, &rustID, &agentVer, &mssqlSt, &posSt, &isOnline, &lastHB, &createdAt); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		d := gin.H{"id": id, "hostname": hostname, "os_version": osVer, "cpu_model": cpuModel, "cpu_cores": cpuCores, "ram_total_mb": ramTotal, "disk_total_mb": diskTotal, "rustdesk_id": rustID, "agent_version": agentVer, "mssql_status": mssqlSt, "pos_process_status": posSt, "is_online": isOnline, "last_heartbeat": lastHB, "created_at": createdAt}
+		devices = append(devices, d)
+	}
+	c.JSON(200, gin.H{"devices": devices, "count": len(devices)})
+}
+EOF
+
 # 9. Migration
-echo "[9/14] Creating migration SQL..."
+echo "[10/15] Creating migration SQL..."
 cat > backend/migrations/001_initial_schema.sql << 'EOF'
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -281,8 +393,27 @@ VALUES ('admin@rmm.local', 'demo_no_bcrypt', 'Admin', 'admin', true)
 ON CONFLICT (email) DO NOTHING;
 EOF
 
+cat > backend/migrations/002_device_metrics.sql << 'EOF'
+CREATE TABLE IF NOT EXISTS device_metrics (
+  id BIGSERIAL PRIMARY KEY,
+  device_id UUID NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  cpu_percent DOUBLE PRECISION,
+  ram_percent DOUBLE PRECISION,
+  ram_used_mb BIGINT,
+  disk_percent DOUBLE PRECISION,
+  disk_used_mb BIGINT,
+  uptime_seconds BIGINT,
+  pos_running BOOLEAN,
+  mssql_running BOOLEAN,
+  recorded_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_device_metrics_device ON device_metrics(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_metrics_time ON device_metrics(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_device_metrics_lookup ON device_metrics(device_id, recorded_at DESC);
+EOF
+
 # 10. Frontend Dockerfile
-echo "[10/14] Creating frontend files..."
+echo "[11/15] Creating frontend Dockerfile..."
 cat > frontend/Dockerfile << 'EOF'
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -298,6 +429,7 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF
 
 # 11. Frontend package.json
+echo "[12/15] Creating frontend npm files..."
 cat > frontend/package.json << 'EOF'
 {"name":"rmm-frontend","version":"1.0.0","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"react":"^18.2.0","react-dom":"^18.2.0","react-router-dom":"^6.20.0"},"devDependencies":{"@vitejs/plugin-react":"^4.2.0","vite":"^5.0.0"}}
 EOF
@@ -426,7 +558,7 @@ export default function Dashboard() {
 EOF
 
 # 12. Frontend nginx.conf
-echo "[12/14] Creating frontend nginx config..."
+echo "[13/15] Creating frontend nginx config..."
 cat > frontend/nginx.conf << 'EOF'
 server {
   listen 80;
@@ -458,7 +590,7 @@ server {
 EOF
 
 # 13. .env
-echo "[13/14] Generating secrets..."
+echo "[14/15] Generating secrets..."
 DB_PASS=$(openssl rand -hex 32)
 JWT_SECRET=$(openssl rand -base64 32)
 cat > .env <<EOF
@@ -469,7 +601,7 @@ echo "DB_PASSWORD=$DB_PASS"
 echo "JWT_SECRET=$JWT_SECRET"
 
 # 14. DEPLOY
-echo "[14/14] Building and starting containers..."
+echo "[15/15] Building and starting containers..."
 export $(grep -v '^#' .env | xargs)
 docker compose build --progress=plain 2>&1 | tail -50
 docker compose up -d
