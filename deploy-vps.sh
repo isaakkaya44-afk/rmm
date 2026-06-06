@@ -64,9 +64,10 @@ cat > backend/Dockerfile << 'EOF'
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
-RUN go mod download
+COPY go.sum* ./
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -o /rmm-api ./cmd/api
+RUN go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -o /rmm-api ./cmd/api
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates tzdata postgresql-client
 WORKDIR /app
