@@ -396,6 +396,18 @@ CREATE INDEX IF NOT EXISTS idx_alerts_device ON alerts(device_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_device ON tickets(device_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS cpu_model VARCHAR(255);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS cpu_cores INTEGER;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS ram_total_mb BIGINT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS disk_total_mb BIGINT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS rustdesk_id VARCHAR(100);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS rustdesk_password VARCHAR(100);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS mssql_status VARCHAR(50) DEFAULT 'unknown';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS pos_process_status VARCHAR(50) DEFAULT 'unknown';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS is_online BOOLEAN DEFAULT false;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE devices ALTER COLUMN os_version TYPE VARCHAR(255);
 INSERT INTO users (email, password_hash, full_name, role, is_active)
 VALUES ('admin@rmm.local', 'demo_no_bcrypt', 'Admin', 'admin', true)
 ON CONFLICT (email) DO NOTHING;
