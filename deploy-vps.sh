@@ -61,11 +61,12 @@ EOF
 # 4. Backend Dockerfile
 echo "[4/15] Creating backend Dockerfile..."
 cat > backend/Dockerfile << 'EOF'
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
 COPY go.mod ./
 COPY go.sum* ./
 COPY . .
+ENV GOTOOLCHAIN=auto
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o /rmm-api ./cmd/api
 FROM alpine:3.19
@@ -127,6 +128,7 @@ import (
 	"rmm-platform/internal/devices"
 )
 func main() {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"service":"rmm-platform-api","status":"ok","version":"1.0.0"}) })
 	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":[]string{"/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard","/api/v1/devices/heartbeat","/api/v1/devices"}}) })
@@ -339,16 +341,21 @@ CREATE TABLE IF NOT EXISTS devices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
   hostname VARCHAR(255) NOT NULL,
-  os VARCHAR(100),
-  os_version VARCHAR(100),
-  arch VARCHAR(50),
-  ip_address INET,
-  mac_address MACADDR,
+  os_version VARCHAR(255),
+  cpu_model VARCHAR(255),
+  cpu_cores INTEGER,
+  ram_total_mb BIGINT,
+  disk_total_mb BIGINT,
+  rustdesk_id VARCHAR(100),
+  rustdesk_password VARCHAR(100),
+  mssql_status VARCHAR(50) DEFAULT 'unknown',
+  pos_process_status VARCHAR(50) DEFAULT 'unknown',
   agent_version VARCHAR(50),
-  status VARCHAR(50) DEFAULT 'offline',
   last_heartbeat TIMESTAMPTZ,
+  is_online BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
   tags TEXT[],
-  metadata JSONB,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -383,7 +390,8 @@ CREATE TABLE IF NOT EXISTS tickets (
   closed_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_devices_customer ON devices(customer_id);
-CREATE INDEX IF NOT EXISTS idx_devices_status ON devices(status);
+CREATE INDEX IF NOT EXISTS idx_devices_hostname ON devices(hostname);
+CREATE INDEX IF NOT EXISTS idx_devices_online ON devices(is_online) WHERE is_online = true;
 CREATE INDEX IF NOT EXISTS idx_alerts_device ON alerts(device_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_created ON alerts(created_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_device ON tickets(device_id);
