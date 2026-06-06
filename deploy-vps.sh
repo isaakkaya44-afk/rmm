@@ -105,11 +105,6 @@ require (
   github.com/gin-gonic/gin v1.10.1
   github.com/golang-jwt/jwt/v5 v5.2.2
   github.com/google/uuid v1.6.0
-  github.com/jackc/pgx/v5 v5.5.5
-  github.com/lib/pq v1.10.9
-  golang.org/x/crypto v0.23.0
-  github.com/swaggo/files v1.0.1
-  github.com/swaggo/gin-swagger v1.6.0
 )
 EOF
 
@@ -126,23 +121,15 @@ import (
 	"syscall"
 	"time"
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "rmm-platform/docs"
 	"rmm-platform/internal/auth"
 )
-// @title RMM Platform API
-// @version 1.0
-// @description RMM Platform REST API
-// @host localhost:8080
-// @BasePath /api/v1
 func main() {
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"service":"rmm-platform-api","status":"ok","version":"1.0.0"}) })
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/", func(c *gin.Context) { c.JSON(200, gin.H{"message":"RMM Platform API","version":"1.0.0","endpoints":["/health","/api/v1/auth/login","/api/v1/auth/register","/api/v1/dashboard"]}) })
 	h := auth.NewHandler()
 	api := r.Group("/api/v1")
-	{ api.POST("/auth/register", h.Register); api.POST("/auth/login", h.Login) }
+	{ api.POST("/auth/register", h.Register); api.POST("/auth/login", h.Login); api.GET("/dashboard", h.Dashboard) }
 	srv := &http.Server{Addr: ":8080", Handler: r}
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed { log.Fatal(err) }
@@ -209,6 +196,7 @@ func (h *Handler) Login(c *gin.Context) {
 }
 func (h *Handler) Register(c *gin.Context) { c.JSON(201, gin.H{"message": "registered"}) }
 func (h *Handler) Me(c *gin.Context) { c.JSON(200, gin.H{"email": "admin@rmm.local", "role": "admin"}) }
+func (h *Handler) Dashboard(c *gin.Context) { c.JSON(200, gin.H{"devices": 0, "alerts": 0, "tickets": 0}) }
 func AuthMiddleware() gin.HandlerFunc { return func(c *gin.Context) { c.Next() } }
 EOF
 
@@ -462,11 +450,6 @@ server {
     proxy_set_header Host $host;
     proxy_read_timeout 86400s;
   }
-  location /swagger/ {
-    proxy_pass http://api:8080;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-  }
   location / {
     try_files $uri $uri/ /index.html;
   }
@@ -487,7 +470,8 @@ echo "JWT_SECRET=$JWT_SECRET"
 # 14. DEPLOY
 echo "[14/14] Building and starting containers..."
 export $(grep -v '^#' .env | xargs)
-docker compose up -d --build
+docker compose build --progress=plain 2>&1 | tail -50
+docker compose up -d
 
 echo ""
 echo "============================================"
