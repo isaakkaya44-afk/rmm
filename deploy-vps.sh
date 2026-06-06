@@ -285,8 +285,8 @@ echo "[10/14] Creating frontend files..."
 cat > frontend/Dockerfile << 'EOF'
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 COPY . .
 RUN npm run build
 FROM nginx:1.25-alpine
@@ -301,7 +301,7 @@ cat > frontend/package.json << 'EOF'
 {"name":"rmm-frontend","version":"1.0.0","scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"dependencies":{"react":"^18.2.0","react-dom":"^18.2.0","react-router-dom":"^6.20.0"},"devDependencies":{"@vitejs/plugin-react":"^4.2.0","vite":"^5.0.0"}}
 EOF
 cat > frontend/package-lock.json << 'EOF'
-{"name":"rmm-frontend","version":"1.0.0","lockfileVersion":3,"requires":true,"packages":{}}
+{"name":"rmm-frontend","version":"1.0.0","lockfileVersion":3,"requires":true,"packages":{"":{"name":"rmm-frontend","version":"1.0.0"}}}
 EOF
 cat > frontend/vite.config.ts << 'EOF'
 import { defineConfig } from "vite"
